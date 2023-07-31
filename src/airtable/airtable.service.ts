@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Airtable from 'airtable';
+import { Mission } from '../missions/entities/mission.entity';
 
 @Injectable()
 export class AirtableService {
@@ -17,22 +18,52 @@ export class AirtableService {
   }
 
   async getAllRecords(tableName: string) {
-    return this.airtable(tableName).select().all();
+    return this.airtable(tableName)
+      .select()
+      .all()
+      .then((records) => records.map((record) => record.fields));
   }
 
   async getRecord(tableName: string, recordId: string) {
-    return this.airtable(tableName).find(recordId);
+    return new Promise((resolve, reject) =>
+      this.airtable(tableName)
+        .select({
+          filterByFormula: `id = '${recordId}'`,
+        })
+        .firstPage((err, records) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          if (records.length === 0) {
+            reject(new Error('Record not found.'));
+            return;
+          }
+
+          resolve(records[0].fields);
+        }),
+    );
   }
 
-  async createRecord(tableName: string, data: any) {
-    return this.airtable(tableName).create(data);
-  }
+  format(fields: Mission) {
+    const mission = {
+      id: fields.id,
+      label: fields.label,
+      beginDate: fields.beginDate,
+      endDate: fields.endDate,
+      missionType: fields.missionType,
+      freelance: null,
+    };
 
-  async updateRecord(tableName: string, recordId: string, data: any) {
-    return this.airtable(tableName).update(recordId, data);
-  }
-
-  async deleteRecord(tableName: string, recordId: string) {
-    return this.airtable(tableName).destroy(recordId);
+    if (fields.freelance) {
+      mission.freelance = {
+        id: fields['id (from freelance)'][0],
+        firstname: fields['firstname (from freelance)'][0],
+        lastname: fields['lastname (from freelance)'][0],
+        email: fields['email (from freelance)'][0],
+      };
+    }
+    return mission;
   }
 }

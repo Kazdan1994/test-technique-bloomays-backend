@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateMissionDto } from './dto/create-mission.dto';
-import { UpdateMissionDto } from './dto/update-mission.dto';
 import { AirtableService } from '../airtable/airtable.service';
+import { Mission } from './entities/mission.entity';
 
 @Injectable()
 export class MissionsService {
@@ -11,30 +10,31 @@ export class MissionsService {
     this.airtableTableName = 'missions';
   }
 
-  async create(createMissionDto: CreateMissionDto) {
-    return this.airtableService.createRecord(
-      this.airtableTableName,
-      createMissionDto,
+  findAll(): Promise<Mission[]> {
+    return new Promise((resolve, reject) =>
+      this.airtableService
+        .getAllRecords(this.airtableTableName)
+        .then((records: Mission[]) => {
+          resolve(records.map((record) => this.airtableService.format(record)));
+        })
+        .catch((err) => {
+          reject(err);
+        }),
     );
   }
 
-  findAll() {
-    return this.airtableService.getAllRecords(this.airtableTableName);
-  }
+  findOne(id: string): Promise<Mission> {
+    return new Promise((resolve, reject) =>
+      this.airtableService
+        .getRecord(this.airtableTableName, id)
+        .then((fields: Mission) => {
+          const mission = this.airtableService.format(fields);
 
-  findOne(id: string) {
-    return this.airtableService.getRecord(this.airtableTableName, id);
-  }
-
-  update(id: string, updateMissionDto: UpdateMissionDto) {
-    return this.airtableService.updateRecord(
-      this.airtableTableName,
-      id,
-      updateMissionDto,
+          resolve(mission);
+        })
+        .catch((err) => {
+          reject(err);
+        }),
     );
-  }
-
-  remove(id: string) {
-    return this.airtableService.deleteRecord(this.airtableTableName, id);
   }
 }
