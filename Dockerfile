@@ -8,13 +8,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install app dependencies
-RUN npm install --omit=dev
+RUN npm install
 
 # Copy all the source code to the container
 COPY . .
 
+# Build the NestJS project
+RUN npm run build
+
 # Expose the port that your NestJS app is running on (change the port if needed)
 EXPOSE 3000
 
-# Start your NestJS app
+# Start the NestJS app
 CMD ["npm", "run", "start:prod"]
